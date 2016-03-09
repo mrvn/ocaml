@@ -179,7 +179,7 @@ let mem h key =
   let rec mem_in_bucket = function
   | Empty ->
       false
-  | Cons(k, d, rest) ->
+  | Cons(k, _, rest) ->
       compare k key = 0 || mem_in_bucket rest in
   mem_in_bucket h.data.(key_index h key)
 
@@ -387,7 +387,7 @@ module MakeSeeded(H: SeededHashedType): (SeededS with type key = H.t) =
       let rec mem_in_bucket = function
       | Empty ->
           false
-      | Cons(k, d, rest) ->
+      | Cons(k, _, rest) ->
           H.equal k key || mem_in_bucket rest in
       mem_in_bucket h.data.(key_index h key)
 
@@ -403,7 +403,7 @@ module Make(H: HashedType): (S with type key = H.t) =
     include MakeSeeded(struct
         type t = H.t
         let equal = H.equal
-        let hash (seed: int) x = H.hash x
+        let hash (_seed: int) x = H.hash x
       end)
     let create sz = create ~random:false sz
   end
