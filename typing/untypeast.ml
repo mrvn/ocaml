@@ -747,7 +747,7 @@ let class_field sub cf =
   in
   Cf.mk ~loc ~attrs desc
 
-let location sub l = l
+let location _sub l = l
 
 let default_mapper =
   {
