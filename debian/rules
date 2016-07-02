@@ -180,6 +180,7 @@ endif
 	fi
 # Remaining stuff
 	-rm -Rf debian/$(SRCTARBALL) debian/examples $(TESTDIR)
+	-rm -Rf asmrun/startup_aux.c asmrun/backtrace.c testsuite/_log
 
 .PHONY: override_dh_auto_install
 override_dh_auto_install: install-stamp
