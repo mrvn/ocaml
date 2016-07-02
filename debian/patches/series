@@ -6,3 +6,4 @@
 0006-Embed-bytecode-in-C-object-when-using-custom.patch
 0008-Native-backtraces-don-t-work-on-powerpc-and-sparc.patch
 0010-Add-a-.file-directive-to-generated-.s-files.patch
+0011-int_least31_elt.patch

@@ -1,3 +1,9 @@
+ocaml (4.04.0+dev0-2016-02-18-0.1) UNRELEASED; urgency=medium
+
+  * add Bigarray int_least31_elt
+
+ -- Goswin von Brederlow <goswin-v-b@web.de>  Sat, 02 Jul 2016 22:08:16 +0200
+
 ocaml (4.04.0+dev0-2016-02-18-0.0) UNRELEASED; urgency=medium
 
   * git checkout 2383de557c5ff416cb7a237ba39d591b1c4f9d95

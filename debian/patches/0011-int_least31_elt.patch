@@ -1,0 +1,241 @@
+Index: ocaml.git/asmcomp/cmmgen.ml
+===================================================================
+--- ocaml.git.orig/asmcomp/cmmgen.ml
++++ ocaml.git/asmcomp/cmmgen.ml
+@@ -888,6 +888,7 @@ let bigarray_elt_size = function
+   | Pbigarray_native_int -> size_int
+   | Pbigarray_complex32 -> 8
+   | Pbigarray_complex64 -> 16
++  | Pbigarray_int_least31 -> 4
+ 
+ (* Produces a pointer to the element of the bigarray [b] on the position
+    [args].  [args] is given as a list of tagged int expressions, one per array
+@@ -951,6 +952,7 @@ let bigarray_word_kind = function
+   | Pbigarray_native_int -> Word_int
+   | Pbigarray_complex32 -> Single
+   | Pbigarray_complex64 -> Double
++  | Pbigarray_int_least31 -> Thirtytwo_signed
+ 
+ let bigarray_get unsafe elt_kind layout b args dbg =
+   bind "ba" b (fun b ->
+Index: ocaml.git/bytecomp/lambda.ml
+===================================================================
+--- ocaml.git.orig/bytecomp/lambda.ml
++++ ocaml.git/bytecomp/lambda.ml
+@@ -157,6 +157,7 @@ and bigarray_kind =
+   | Pbigarray_int32 | Pbigarray_int64
+   | Pbigarray_caml_int | Pbigarray_native_int
+   | Pbigarray_complex32 | Pbigarray_complex64
++  | Pbigarray_int_least31
+ 
+ and bigarray_layout =
+     Pbigarray_unknown_layout
+Index: ocaml.git/bytecomp/lambda.mli
+===================================================================
+--- ocaml.git.orig/bytecomp/lambda.mli
++++ ocaml.git/bytecomp/lambda.mli
+@@ -163,6 +163,7 @@ and bigarray_kind =
+   | Pbigarray_int32 | Pbigarray_int64
+   | Pbigarray_caml_int | Pbigarray_native_int
+   | Pbigarray_complex32 | Pbigarray_complex64
++  | Pbigarray_int_least31
+ 
+ and bigarray_layout =
+     Pbigarray_unknown_layout
+Index: ocaml.git/otherlibs/bigarray/bigarray.h
+===================================================================
+--- ocaml.git.orig/otherlibs/bigarray/bigarray.h
++++ ocaml.git/otherlibs/bigarray/bigarray.h
+@@ -47,6 +47,7 @@ enum caml_ba_kind {
+   CAML_BA_COMPLEX32,           /* Single-precision complex */
+   CAML_BA_COMPLEX64,           /* Double-precision complex */
+   CAML_BA_CHAR,                /* Characters */
++  CAML_BA_INT_LEAST31,         /* Small Caml-style integers (least signed 31 bits) */
+   CAML_BA_KIND_MASK = 0xFF     /* Mask for kind in flags field */
+ };
+ 
+Index: ocaml.git/otherlibs/bigarray/bigarray.ml
+===================================================================
+--- ocaml.git.orig/otherlibs/bigarray/bigarray.ml
++++ ocaml.git/otherlibs/bigarray/bigarray.ml
+@@ -31,6 +31,7 @@ type int_elt = Int_elt
+ type nativeint_elt = Nativeint_elt
+ type complex32_elt = Complex32_elt
+ type complex64_elt = Complex64_elt
++type int_least31_elt = Int_least31_elt
+ 
+ type ('a, 'b) kind =
+     Float32 : (float, float32_elt) kind
+@@ -46,6 +47,7 @@ type ('a, 'b) kind =
+   | Complex32 : (Complex.t, complex32_elt) kind
+   | Complex64 : (Complex.t, complex64_elt) kind
+   | Char : (char, int8_unsigned_elt) kind
++  | Int_least31 : (int, int_least31_elt) kind
+ 
+ (* Keep those constants in sync with the caml_ba_kind enumeration
+    in bigarray.h *)
+@@ -63,6 +65,7 @@ let nativeint = Nativeint
+ let complex32 = Complex32
+ let complex64 = Complex64
+ let char = Char
++let int_least31 = Int_least31
+ 
+ let kind_size_in_bytes : type a b. (a, b) kind -> int = function
+   | Float32 -> 4
+@@ -78,6 +81,7 @@ let kind_size_in_bytes : type a b. (a, b
+   | Complex32 -> 8
+   | Complex64 -> 16
+   | Char -> 1
++  | Int_least31 -> 4
+ 
+ type c_layout = C_layout_typ
+ type fortran_layout = Fortran_layout_typ
+Index: ocaml.git/otherlibs/bigarray/bigarray.mli
+===================================================================
+--- ocaml.git.orig/otherlibs/bigarray/bigarray.mli
++++ ocaml.git/otherlibs/bigarray/bigarray.mli
+@@ -71,6 +71,7 @@ type int_elt = Int_elt
+ type nativeint_elt = Nativeint_elt
+ type complex32_elt = Complex32_elt
+ type complex64_elt = Complex64_elt
++type int_least31_elt = Int_least31_elt
+ 
+ type ('a, 'b) kind =
+     Float32 : (float, float32_elt) kind
+@@ -86,6 +87,7 @@ type ('a, 'b) kind =
+   | Complex32 : (Complex.t, complex32_elt) kind
+   | Complex64 : (Complex.t, complex64_elt) kind
+   | Char : (char, int8_unsigned_elt) kind (**)
++  | Int_least31 : (int, int_least31_elt) kind
+ (** To each element kind is associated an OCaml type, which is
+    the type of OCaml values that can be stored in the big array
+    or read back from it.  This type is not necessarily the same
+@@ -114,7 +116,7 @@ type ('a, 'b) kind =
+     | Int16_signed -> 0 | Int16_unsigned -> 0
+     | Int32 -> 0l | Int64 -> 0L
+     | Int -> 0 | Nativeint -> 0n
+-    | Char -> '\000'
++    | Char -> '\000' | Int_least31 -> 0
+ ]}
+ *)
+ 
+@@ -162,14 +164,17 @@ val char : (char, int8_unsigned_elt) kin
+    {!Complex.t}. Big arrays of
+    integer kinds are accessed using the smallest OCaml integer
+    type large enough to represent the array elements:
+-   [int] for 8- and 16-bit integer bigarrays, as well as OCaml-integer
+-   bigarrays; [int32] for 32-bit integer bigarrays; [int64]
++   [int] for 8-, 16- and least 31-bit integer bigarrays, as well as
++   OCaml-integer bigarrays; [int32] for 32-bit integer bigarrays; [int64]
+    for 64-bit integer bigarrays; and [nativeint] for
+    platform-native integer bigarrays.  Finally, big arrays of
+    kind [int8_unsigned_elt] can also be accessed as arrays of
+    characters instead of arrays of small integers, by using
+    the kind value [char] instead of [int8_unsigned]. *)
+ 
++val int_least31 : (int, int_least31_elt) kind
++(** See {!Bigarray.char}. *)
++
+ val kind_size_in_bytes : ('a, 'b) kind -> int
+ (** [kind_size_in_bytes k] is the number of bytes used to store
+    an element of type [k]. *)
+Index: ocaml.git/otherlibs/bigarray/bigarray_stubs.c
+===================================================================
+--- ocaml.git.orig/otherlibs/bigarray/bigarray_stubs.c
++++ ocaml.git/otherlibs/bigarray/bigarray_stubs.c
+@@ -54,7 +54,8 @@ int caml_ba_element_size[] =
+   4 /*INT32*/, 8 /*INT64*/,
+   sizeof(value) /*CAML_INT*/, sizeof(value) /*NATIVE_INT*/,
+   8 /*COMPLEX32*/, 16 /*COMPLEX64*/,
+-  1 /*CHAR*/
++  1 /*CHAR*/,
++  4 /*INT_LEAST31*/,
+ };
+ 
+ /* Compute the number of bytes for the elements of a big array */
+@@ -297,6 +298,8 @@ value caml_ba_get_N(value vb, value * vi
+       return copy_two_doubles(p[0], p[1]); }
+   case CAML_BA_CHAR:
+     return Val_int(((unsigned char *) b->data)[offset]);
++  case CAML_BA_INT_LEAST31:
++    return Val_int(((int32_t *) b->data)[offset]);
+   }
+ }
+ 
+@@ -467,6 +470,8 @@ static value caml_ba_set_aux(value vb, v
+       p[0] = Double_field(newval, 0);
+       p[1] = Double_field(newval, 1);
+       break; }
++  case CAML_BA_INT_LEAST31:
++    ((int32_t *) b->data)[offset] = Int_val(newval); break;
+   }
+   return Val_unit;
+ }
+@@ -769,6 +774,8 @@ static int caml_ba_compare(value v1, val
+   case CAML_BA_CAML_INT:
+   case CAML_BA_NATIVE_INT:
+     DO_INTEGER_COMPARISON(intnat);
++  case CAML_BA_INT_LEAST31:
++    DO_INTEGER_COMPARISON(int32_t);
+   default:
+     Assert(0);
+     return 0;                   /* should not happen */
+@@ -821,6 +828,7 @@ static intnat caml_ba_hash(value v)
+       h = caml_hash_mix_uint32(h, p[0]);
+     break;
+   }
++  case CAML_BA_INT_LEAST31:
+   case CAML_BA_INT32:
+   {
+     uint32_t * p = b->data;
+@@ -918,6 +926,7 @@ static void caml_ba_serialize(value v,
+   case CAML_BA_UINT16:
+     caml_serialize_block_2(b->data, num_elts); break;
+   case CAML_BA_FLOAT32:
++  case CAML_BA_INT_LEAST31:
+   case CAML_BA_INT32:
+     caml_serialize_block_4(b->data, num_elts); break;
+   case CAML_BA_COMPLEX32:
+@@ -991,6 +1000,7 @@ uintnat caml_ba_deserialize(void * dst)
+   case CAML_BA_UINT16:
+     caml_deserialize_block_2(b->data, num_elts); break;
+   case CAML_BA_FLOAT32:
++  case CAML_BA_INT_LEAST31:
+   case CAML_BA_INT32:
+     caml_deserialize_block_4(b->data, num_elts); break;
+   case CAML_BA_COMPLEX32:
+@@ -1253,6 +1263,12 @@ CAMLprim value caml_ba_fill(value vb, va
+     FILL_COMPLEX_LOOP;
+     break;
+   }
++  case CAML_BA_INT_LEAST31: {
++    int init = Int_val(vinit);
++    int32_t * p;
++    FILL_SCALAR_LOOP;
++    break;
++  }
+   }
+   CAMLreturn (Val_unit);
+ }
+Index: ocaml.git/bytecomp/printlambda.ml
+===================================================================
+--- ocaml.git.orig/bytecomp/printlambda.ml
++++ ocaml.git/bytecomp/printlambda.ml
+@@ -81,11 +81,14 @@ let print_bigarray name unsafe kind ppf
+      | Pbigarray_caml_int -> "camlint"
+      | Pbigarray_native_int -> "nativeint"
+      | Pbigarray_complex32 -> "complex32"
+-     | Pbigarray_complex64 -> "complex64")
++     | Pbigarray_complex64 -> "complex64"
++     | Pbigarray_int_least31 -> "int_least31"
++    )
+     (match layout with
+-    |  Pbigarray_unknown_layout -> "unknown"
++     | Pbigarray_unknown_layout -> "unknown"
+      | Pbigarray_c_layout -> "C"
+-     | Pbigarray_fortran_layout -> "Fortran")
++     | Pbigarray_fortran_layout -> "Fortran"
++    )
+ 
+ let record_rep ppf r =
+   match r with
