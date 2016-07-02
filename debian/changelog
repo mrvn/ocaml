@@ -1,4 +1,4 @@
-ocaml (4.03.1~trunk+20160702-0.0) UNRELEASED; urgency=medium
+ocaml (4.04.0+dev0-2016-02-18-0.0) UNRELEASED; urgency=medium
 
   * git checkout 2383de557c5ff416cb7a237ba39d591b1c4f9d95
 

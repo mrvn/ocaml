@@ -22,71 +22,62 @@ Bug-Debian: https://bugs.debian.org/796336
  asmcomp/sparc/emit.mlp | 1 +
  6 files changed, 6 insertions(+)
 
-diff --git a/asmcomp/amd64/emit.mlp b/asmcomp/amd64/emit.mlp
-index d56d0f5..4d7aa30 100644
---- a/asmcomp/amd64/emit.mlp
-+++ b/asmcomp/amd64/emit.mlp
-@@ -794,6 +794,7 @@ let data l =
- let begin_assembly() =
-   reset_debug_info();                   (* PR#5603 *)
-   float_constants := [];
-+  `	.file \"{emit_string (String.escaped !Location.input_name)}\"\n`;
-   if !Clflags.dlcode then begin
-     (* from amd64.S; could emit these constants on demand *)
-     if macosx then
-diff --git a/asmcomp/arm/emit.mlp b/asmcomp/arm/emit.mlp
-index 4948fb2..6f30fba 100644
---- a/asmcomp/arm/emit.mlp
-+++ b/asmcomp/arm/emit.mlp
-@@ -892,6 +892,7 @@ let data l =
+Index: ocaml.git/asmcomp/arm/emit.mlp
+===================================================================
+--- ocaml.git.orig/asmcomp/arm/emit.mlp
++++ ocaml.git/asmcomp/arm/emit.mlp
+@@ -895,7 +895,7 @@ let data l =
  
  let begin_assembly() =
    reset_debug_info();
-+  `	.file \"{emit_string (String.escaped !Location.input_name)}\"\n`;
+-  `	.file	\"\"\n`;  (* PR#7037 *)
++  `	.file \"{emit_string (String.escaped !Location.input_name)}\"\n`; (* PR#7037 *)
    `	.syntax	unified\n`;
    begin match !arch with
    | ARMv4   -> `	.arch	armv4t\n`
-diff --git a/asmcomp/arm64/emit.mlp b/asmcomp/arm64/emit.mlp
-index 750c2b2..5afbb8a 100644
---- a/asmcomp/arm64/emit.mlp
-+++ b/asmcomp/arm64/emit.mlp
-@@ -942,6 +942,7 @@ let data l =
+Index: ocaml.git/asmcomp/arm64/emit.mlp
+===================================================================
+--- ocaml.git.orig/asmcomp/arm64/emit.mlp
++++ ocaml.git/asmcomp/arm64/emit.mlp
+@@ -946,7 +946,7 @@ let data l =
  
  let begin_assembly() =
    reset_debug_info();
-+  `	.file \"{emit_string (String.escaped !Location.input_name)}\"\n`;
+-  `	.file	\"\"\n`;  (* PR#7037 *)
++  `	.file \"{emit_string (String.escaped !Location.input_name)}\"\n`; (* PR#7037 *)
    let lbl_begin = Compilenv.make_symbol (Some "data_begin") in
    `	.data\n`;
    `	.globl	{emit_symbol lbl_begin}\n`;
-diff --git a/asmcomp/i386/emit.mlp b/asmcomp/i386/emit.mlp
-index 98df5f9..531150f 100644
---- a/asmcomp/i386/emit.mlp
-+++ b/asmcomp/i386/emit.mlp
-@@ -986,6 +986,7 @@ let data l =
- let begin_assembly() =
+Index: ocaml.git/asmcomp/i386/emit.mlp
+===================================================================
+--- ocaml.git.orig/asmcomp/i386/emit.mlp
++++ ocaml.git/asmcomp/i386/emit.mlp
+@@ -1012,6 +1012,7 @@ let begin_assembly() =
+   X86_proc.reset_asm_code ();
    reset_debug_info();                   (* PR#5603 *)
    float_constants := [];
 +  `	.file \"{emit_string (String.escaped !Location.input_name)}\"\n`;
-   let lbl_begin = Compilenv.make_symbol (Some "data_begin") in
-   `	.data\n`;
-   `	.globl	{emit_symbol lbl_begin}\n`;
-diff --git a/asmcomp/power/emit.mlp b/asmcomp/power/emit.mlp
-index 4344085..343132b 100644
---- a/asmcomp/power/emit.mlp
-+++ b/asmcomp/power/emit.mlp
-@@ -887,6 +887,7 @@ let data l =
+   if system = S_win32 then begin
+     D.mode386 ();
+     D.model "FLAT";
+Index: ocaml.git/asmcomp/power/emit.mlp
+===================================================================
+--- ocaml.git.orig/asmcomp/power/emit.mlp
++++ ocaml.git/asmcomp/power/emit.mlp
+@@ -1135,7 +1135,7 @@ let data l =
+ 
  let begin_assembly() =
-   defined_functions := StringSet.empty;
-   external_functions := StringSet.empty;
-+  `	.file \"{emit_string (String.escaped !Location.input_name)}\"\n`;
-   (* Emit the beginning of the segments *)
-   let lbl_begin = Compilenv.make_symbol (Some "data_begin") in
-   emit_string data_space;
-diff --git a/asmcomp/sparc/emit.mlp b/asmcomp/sparc/emit.mlp
-index 877a3d5..7b041e9 100644
---- a/asmcomp/sparc/emit.mlp
-+++ b/asmcomp/sparc/emit.mlp
-@@ -727,6 +727,7 @@ let data l =
+   reset_debug_info();
+-  `	.file	\"\"\n`;  (* PR#7037 *)
++  `	.file \"{emit_string (String.escaped !Location.input_name)}\"\n`; (* PR#7037 *)
+   begin match abi with
+   | ELF64v2 -> `	.abiversion 2\n`
+   | _ -> ()
+Index: ocaml.git/asmcomp/sparc/emit.mlp
+===================================================================
+--- ocaml.git.orig/asmcomp/sparc/emit.mlp
++++ ocaml.git/asmcomp/sparc/emit.mlp
+@@ -740,6 +740,7 @@ let data l =
  (* Beginning / end of an assembly file *)
  
  let begin_assembly() =
