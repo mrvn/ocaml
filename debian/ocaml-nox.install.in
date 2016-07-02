@@ -230,6 +230,7 @@ STD: digest.cmx
 STD: dynlink.mli
 STD: ephemeron.ml
 STD: ephemeron.mli
+STD: ephemeron.cmi
 STD: ephemeron.cmx
 STD: event.mli
 STD: filename.ml
@@ -351,6 +352,7 @@ STD: thread.mli
 STD: threadUnix.mli
 STD: uchar.ml
 STD: uchar.mli
+STD: uchar.cmi
 STD: uchar.cmx
 STD: unix.cmx
 STD: unix.cmxa
